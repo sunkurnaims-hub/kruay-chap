@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ร้านกล้วยฉาบโฮมเมด - สั่งซื้อ & ระบบหลังร้าน</title>
+    <!-- Google Fonts: Prompt for clean minimalist Thai typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode.js for crisp, reliable QR rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        cream: {
+                            50: '#FDFBF7',
+                            100: '#F9F5EB',
+                            200: '#F2E8D5',
+                            300: '#E6D5B8',
+                        },
+                        banana: {
+                            400: '#E8B84B',
+                            500: '#D99B26',
+                            600: '#B87D14',
+                            700: '#8F5E0C',
+                        },
+                        cocoa: {
+                            700: '#5C4938',
+                            800: '#423326',
+                            900: '#2B2017',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FDFBF7;
+            color: #423326;
+            font-family: 'Prompt', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Smooth custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F9F5EB;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E6D5B8;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D99B26;
+        }
+        .card-minimal {
+            background: #FFFFFF;
+            border: 1px solid #F2E8D5;
+            box-shadow: 0 4px 20px -2px rgba(92, 73, 56, 0.04);
+        }
+        .fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Ensure QR canvas/img centers cleanly */
+        #qrcode-container img, #qrcode-container canvas {
+            margin: 0 auto;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Toast Notification Banner (Replaces alert()) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-cream-50/90 backdrop-blur-md border-b border-cream-200">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('store')">
+                <div class="w-10 h-10 rounded-2xl bg-banana-400/20 border border-banana-400/40 flex items-center justify-center text-banana-600">
+                    <!-- Minimalist Banana Chip SVG Icon -->
+                    <svg class="w-6 h-6" viewBox="0 0 36 36" fill="none">
+                        <ellipse cx="18" cy="18" rx="13" ry="11" transform="rotate(-18 18 18)" fill="#F6D365" stroke="#B87D14" stroke-width="2"/>
+                        <ellipse cx="18" cy="18" rx="8" ry="6.5" transform="rotate(-18 18 18)" fill="#FBE59E"/>
+                        <circle cx="15" cy="16" r="1" fill="#B87D14" opacity="0.6"/>
+                        <circle cx="20" cy="19" r="1" fill="#B87D14" opacity="0.6"/>
+                        <circle cx="18" cy="14" r="0.8" fill="#B87D14" opacity="0.6"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-base sm:text-lg text-cocoa-900 leading-tight">บ้านกล้วยฉาบ</h1>
+                    <p class="text-xs text-cocoa-700/70">กรอบอร่อย ทำสดใหม่ • ถุงละ 10 บาท</p>
+                </div>
+            </div>
+
+            <!-- Navigation Switcher -->
+            <div class="flex items-center gap-2">
+                <button id="nav-store-btn" onclick="switchView('store')" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cocoa-800 text-cream-50 shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="store" class="w-4 h-4"></i>
+                    <span>หน้าร้านสั่งซื้อ</span>
+                </button>
+                <button id="nav-admin-btn" onclick="openAdminGate()" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cream-100 text-cocoa-800 hover:bg-cream-200 border border-cream-200 flex items-center gap-1.5">
+                    <i data-lucide="lock" class="w-4 h-4 text-banana-600"></i>
+                    <span>หลังร้าน</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        <!-- ========================================================= -->
+        <!-- VIEW 1: CUSTOMER STOREFRONT (หน้าร้านสำหรับลูกค้า)          -->
+        <!-- ========================================================= -->
+        <section id="view-store" class="fade-in space-y-8">
+            
+            <!-- Minimalist Hero Banner -->
+            <div class="rounded-3xl bg-gradient-to-br from-cream-100 via-cream-50 to-amber-50/70 border border-cream-200 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div class="space-y-2.5 text-center sm:text-left max-w-xl">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-banana-400/20 text-banana-700 border border-banana-400/30">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> คัดสรรกล้วยคุณภาพดี ทอดกรอบไม่อมน้ำมัน
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-cocoa-900 tracking-tight">
+                        กล้วยฉาบโฮมเมด 4 รสชาติ
+                    </h2>
+                    <p class="text-sm sm:text-base text-cocoa-700/80 leading-relaxed">
+                        ผลิตจากกล้วยทั่วไปคัดพิเศษ แผ่นบางกรอบ เคี้ยวเพลินทุกคำ ราคาสบายกระเป๋า <strong class="text-banana-700 font-semibold">เพียงถุงละ 10 บาท</strong> ทุกรสชาติ
+                    </p>
+                    <div class="pt-1 flex flex-wrap justify-center sm:justify-start gap-3 text-xs text-cocoa-700">
+                        <span class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-cream-200">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-banana-600"></i> นัดรับฟรี: วิทยาลัยชุมชนสงขลา
+                        </span>
+                        <span class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-cream-200">
+                            <i data-lucide="truck" class="w-3.5 h-3.5 text-banana-600"></i> จัดส่งตามที่อยู่ +25 บาท
+                        </span>
+                    </div>
+                </div>
+                <!-- Minimalist Decorative Illustration -->
+                <div class="w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0 bg-white rounded-3xl border border-cream-200 shadow-sm flex items-center justify-center p-4">
+                    <svg viewBox="0 0 160 160" class="w-full h-full">
+                        <circle cx="80" cy="80" r="64" fill="#F9F5EB"/>
+                        <!-- Back Chip -->
+                        <g transform="translate(55, 45) rotate(-15)">
+                            <ellipse cx="30" cy="24" rx="28" ry="22" fill="#E8B84B" stroke="#B87D14" stroke-width="2.5"/>
+                            <ellipse cx="30" cy="24" rx="18" ry="13" fill="#F6D365"/>
+                            <circle cx="24" cy="20" r="1.8" fill="#B87D14" opacity="0.5"/>
+                            <circle cx="35" cy="27" r="1.5" fill="#B87D14" opacity="0.5"/>
+                        </g>
+                        <!-- Front Chip -->
+                        <g transform="translate(42, 70) rotate(12)">
+                            <ellipse cx="36" cy="28" rx="34" ry="26" fill="#F6D365" stroke="#B87D14" stroke-width="2.5"/>
+                            <ellipse cx="36" cy="28" rx="22" ry="16" fill="#FBE59E"/>
+                            <circle cx="30" cy="24" r="2" fill="#B87D14" opacity="0.5"/>
+                            <circle cx="42" cy="31" r="1.8" fill="#B87D14" opacity="0.5"/>
+                            <circle cx="36" cy="21" r="1.5" fill="#B87D14" opacity="0.5"/>
+                        </g>
+                        <!-- Minimal Leaf Accent -->
+                        <path d="M118 42C128 38 136 44 134 54C124 58 116 52 118 42Z" fill="#7FA96B"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Two-Column Layout: Product Selection + Order Checkout Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Left Column (7 cols): Product Cards -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-cocoa-900 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-banana-500 text-white text-xs flex items-center justify-center font-bold">1</span>
+                            เลือกรสชาติกล้วยฉาบ
+                        </h3>
+                        <span class="text-xs text-cocoa-700/70">คลิก + เพื่อเพิ่มลงตะกร้า</span>
+                    </div>
+
+                    <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Rendered dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column (5 cols): Cart & Checkout Form -->
+                <div class="lg:col-span-5 space-y-5 lg:sticky lg:top-24">
+                    <div class="card-minimal rounded-3xl p-5 sm:p-6 space-y-5">
+                        <div class="flex items-center justify-between border-b border-cream-200 pb-3.5">
+                            <h3 class="text-lg font-semibold text-cocoa-900 flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-banana-500 text-white text-xs flex items-center justify-center font-bold">2</span>
+                                สรุปรายการ & ชำระเงิน
+                            </h3>
+                            <button type="button" onclick="clearCart()" class="text-xs text-cocoa-700/60 hover:text-red-500 transition-colors">
+                                ล้างตะกร้า
+                            </button>
+                        </div>
+
+                        <!-- Cart Items List -->
+                        <div id="cart-items-container" class="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                            <!-- Rendered dynamically -->
+                        </div>
+
+                        <!-- Delivery / Pickup Selection -->
+                        <div class="space-y-3 pt-2 border-t border-cream-200">
+                            <label class="block text-sm font-medium text-cocoa-900">รูปแบบการรับสินค้า</label>
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <button type="button" id="btn-method-pickup" onclick="setDeliveryMethod('pickup')" class="p-3 rounded-2xl border-2 border-banana-500 bg-banana-400/10 text-left transition-all">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <i data-lucide="map-pin" class="w-4 h-4 text-banana-600"></i>
+                                        <span class="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">ส่งฟรี</span>
+                                    </div>
+                                    <div class="text-xs sm:text-sm font-semibold text-cocoa-900">นัดรับสินค้า</div>
+                                    <div class="text-[11px] text-cocoa-700/80 mt-0.5">วิทยาลัยชุมชนสงขลา</div>
+                                </button>
+
+                                <button type="button" id="btn-method-delivery" onclick="setDeliveryMethod('delivery')" class="p-3 rounded-2xl border border-cream-200 bg-cream-50/50 hover:bg-cream-100/60 text-left transition-all">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <i data-lucide="truck" class="w-4 h-4 text-cocoa-700"></i>
+                                        <span class="text-xs font-semibold text-banana-700 bg-banana-400/20 px-2 py-0.5 rounded-full">+25 ฿</span>
+                                    </div>
+                                    <div class="text-xs sm:text-sm font-semibold text-cocoa-900">จัดส่งตามที่อยู่</div>
+                                    <div class="text-[11px] text-cocoa-700/80 mt-0.5">ค่าจัดส่ง 25 บาท</div>
+                                </button>
+                            </div>
+
+                            <!-- Pickup Info Badge -->
+                            <div id="pickup-info-box" class="p-3 rounded-2xl bg-cream-100/80 border border-cream-200 text-xs text-cocoa-800 flex items-start gap-2.5">
+                                <i data-lucide="info" class="w-4 h-4 text-banana-600 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <span class="font-semibold">จุดนัดรับ: วิทยาลัยชุมชนสงขลา</span>
+                                    <p class="text-cocoa-700/80 mt-0.5">ไม่มีค่าจัดส่ง สามารถนัดรับตามวันที่ระบุได้เลยค่ะ</p>
+                                </div>
+                            </div>
+
+                            <!-- Customer Details -->
+                            <div class="space-y-2.5">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs font-medium text-cocoa-700 mb-1">ชื่อผู้สั่งซื้อ *</label>
+                                        <input type="text" id="cust-name" placeholder="ระบุชื่อเล่น หรือ ชื่อจริง" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500 focus:bg-white transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-cocoa-700 mb-1">เบอร์โทรศัพท์ *</label>
+                                        <input type="tel" id="cust-phone" placeholder="08X-XXX-XXXX" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500 focus:bg-white transition-colors">
+                                    </div>
+                                </div>
+
+                                <!-- Delivery Address (Shown only when delivery is selected) -->
+                                <div id="delivery-address-box" class="hidden">
+                                    <label class="block text-xs font-medium text-cocoa-700 mb-1">ที่อยู่สำหรับจัดส่ง *</label>
+                                    <textarea id="cust-address" rows="2" placeholder="บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์" class="w-full px-3.5 py-2 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500 focus:bg-white transition-colors"></textarea>
+                                </div>
+
+                                <!-- Pickup / Delivery Date -->
+                                <div>
+                                    <label class="block text-xs font-medium text-cocoa-700 mb-1">วันที่รับสินค้า / วันที่ต้องการจัดส่ง *</label>
+                                    <input type="date" id="cust-date" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500 focus:bg-white transition-colors">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Selection -->
+                        <div class="space-y-2.5 pt-2 border-t border-cream-200">
+                            <label class="block text-sm font-medium text-cocoa-900">ช่องทางการชำระเงิน</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-3 p-3 rounded-2xl border border-cream-200 bg-cream-50/50 cursor-pointer hover:bg-cream-100/60 transition-all has-[:checked]:border-banana-500 has-[:checked]:bg-banana-400/10">
+                                    <input type="radio" name="payment-method" value="promptpay" checked onchange="onPaymentMethodChange()" class="accent-banana-600 w-4 h-4">
+                                    <div class="flex-grow">
+                                        <div class="text-sm font-medium text-cocoa-900 flex items-center gap-1.5">
+                                            <i data-lucide="qr-code" class="w-4 h-4 text-banana-600"></i> โอนเงินผ่านพร้อมเพย์ (PromptPay QR)
+                                        </div>
+                                        <div class="text-[11px] text-cocoa-700/70">สแกน QR Code ยอดตรงอัตโนมัติ & แนบสลิป</div>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 rounded-2xl border border-cream-200 bg-cream-50/50 cursor-pointer hover:bg-cream-100/60 transition-all has-[:checked]:border-banana-500 has-[:checked]:bg-banana-400/10">
+                                    <input type="radio" name="payment-method" value="cash" onchange="onPaymentMethodChange()" class="accent-banana-600 w-4 h-4">
+                                    <div class="flex-grow">
+                                        <div class="text-sm font-medium text-cocoa-900 flex items-center gap-1.5">
+                                            <i data-lucide="banknote" class="w-4 h-4 text-emerald-600"></i> เงินสด (จ่ายตอนรับสินค้า)
+                                        </div>
+                                        <div class="text-[11px] text-cocoa-700/70">ชำระด้วยเงินสดเมื่อได้รับสินค้า</div>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 rounded-2xl border border-cream-200 bg-cream-50/50 cursor-pointer hover:bg-cream-100/60 transition-all has-[:checked]:border-banana-500 has-[:checked]:bg-banana-400/10">
+                                    <input type="radio" name="payment-method" value="pay_on_pickup" onchange="onPaymentMethodChange()" class="accent-banana-600 w-4 h-4">
+                                    <div class="flex-grow">
+                                        <div class="text-sm font-medium text-cocoa-900 flex items-center gap-1.5">
+                                            <i data-lucide="hand-coins" class="w-4 h-4 text-amber-600"></i> ชำระเงินช่วงรับสินค้าพอดี
+                                        </div>
+                                        <div class="text-[11px] text-cocoa-700/70">โอนหรือสแกนจ่ายหน้างานตอนรับของพอดี</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Real PromptPay QR Code Section -->
+                        <div id="promptpay-box" class="p-4 rounded-2xl bg-cream-50 border border-banana-400/40 space-y-3 text-center">
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#113566] text-white text-xs font-medium">
+                                <span>Thai QR Payment • พร้อมเพย์</span>
+                            </div>
+                            
+                            <!-- Generated QR Code Container -->
+                            <div class="bg-white p-3 rounded-2xl inline-block border border-cream-200 shadow-sm">
+                                <div id="qrcode-container" class="w-[180px] h-[180px] flex items-center justify-center"></div>
+                            </div>
+
+                            <div class="space-y-1">
+                                <p class="text-xs text-cocoa-700">สแกนด้วยแอปธนาคารใดก็ได้ (ระบุยอดเงินอัตโนมัติ)</p>
+                                <p class="text-sm font-semibold text-cocoa-900">ชื่อบัญชี: ซุลกุรนัยน์ มุเซะ</p>
+                                <div class="flex items-center justify-center gap-2 pt-1">
+                                    <span class="text-xs font-mono bg-white px-2.5 py-1 rounded-lg border border-cream-200 text-cocoa-800">082-834-7938</span>
+                                    <button type="button" onclick="copyPromptPayNumber()" class="text-xs px-2.5 py-1 rounded-lg bg-banana-400/20 hover:bg-banana-400/30 text-banana-700 font-medium transition-colors flex items-center gap-1">
+                                        <i data-lucide="copy" class="w-3 h-3"></i> คัดลอกเบอร์
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Slip Upload -->
+                            <div class="pt-2 border-t border-cream-200 text-left">
+                                <label class="block text-xs font-medium text-cocoa-800 mb-1.5">แนบสลิปการโอนเงิน (ถ้ามี)</label>
+                                <label class="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-dashed border-banana-500/60 bg-white hover:bg-cream-100/50 cursor-pointer transition-colors text-xs text-cocoa-700">
+                                    <i data-lucide="image-plus" class="w-4 h-4 text-banana-600"></i>
+                                    <span id="slip-file-label">เลือกรูปภาพสลิปโอนเงิน</span>
+                                    <input type="file" id="slip-input" accept="image/*" class="hidden" onchange="handleSlipUpload(event)">
+                                </label>
+                                <div id="slip-preview-wrapper" class="hidden mt-2 relative rounded-xl overflow-hidden border border-cream-200 bg-white p-1.5">
+                                    <img id="slip-preview-img" src="" alt="ตัวอย่างสลิป" class="max-h-36 mx-auto rounded-lg object-contain">
+                                    <button type="button" onclick="removeSlip()" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Calculation Summary -->
+                        <div class="pt-3 border-t border-cream-200 space-y-1.5 text-sm">
+                            <div class="flex justify-between text-cocoa-700">
+                                <span>ค่าสินค้า (<span id="summary-total-bags">0</span> ถุง)</span>
+                                <span><span id="summary-subtotal">0</span> บาท</span>
+                            </div>
+                            <div class="flex justify-between text-cocoa-700">
+                                <span>ค่าจัดส่ง (<span id="summary-delivery-label">นัดรับวิทยาลัยชุมชนสงขลา</span>)</span>
+                                <span><span id="summary-shipping">0</span> บาท</span>
+                            </div>
+                            <div class="flex justify-between items-baseline pt-2 border-t border-cream-200">
+                                <span class="font-semibold text-cocoa-900">ยอดชำระทั้งหมด</span>
+                                <span class="text-xl font-bold text-banana-600"><span id="summary-grand-total">0</span> บาท</span>
+                            </div>
+                        </div>
+
+                        <!-- Submit Order Button -->
+                        <button type="button" onclick="submitOrder()" class="w-full py-3.5 px-5 rounded-2xl bg-cocoa-800 hover:bg-cocoa-900 active:scale-[0.99] text-cream-50 font-semibold text-sm sm:text-base shadow-md transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-banana-400"></i>
+                            <span>ยืนยันการสั่งซื้อ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- VIEW 2: ADMIN BACK-OFFICE DASHBOARD (ระบบหลังร้าน)          -->
+        <!-- ========================================================= -->
+        <section id="view-admin" class="hidden fade-in space-y-6">
+            
+            <!-- Admin Top Bar -->
+            <div class="card-minimal rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-banana-400/20 text-banana-700">ระบบจัดการหลังร้าน</span>
+                        <span class="text-xs text-cocoa-700/60">• ข้อมูลบันทึกอัตโนมัติ</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-cocoa-900 mt-1">สรุปยอดขาย & รายการคำสั่งซื้อ</h2>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="addSampleOrder()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-cream-100 hover:bg-cream-200 text-cocoa-800 border border-cream-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-banana-600"></i> เพิ่มออเดอร์ทดสอบ
+                    </button>
+                    <button onclick="openChangePasswordModal()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-cream-100 hover:bg-cream-200 text-cocoa-800 border border-cream-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="key-round" class="w-4 h-4 text-banana-600"></i> เปลี่ยนรหัสหลังร้าน
+                    </button>
+                    <button onclick="logoutAdmin()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> ออกจากหลังร้าน
+                    </button>
+                </div>
+            </div>
+
+            <!-- Date Filter & Export Bar -->
+            <div class="card-minimal rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <label class="text-sm font-medium text-cocoa-800 flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-4 h-4 text-banana-600"></i> เลือกดูยอดตามวันที่:
+                    </label>
+                    <input type="date" id="admin-filter-date" onchange="renderAdminDashboard()" class="px-3 py-1.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500">
+                    <button onclick="setAdminFilterToday()" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-banana-400/20 text-banana-700 hover:bg-banana-400/30 transition-colors">
+                        วันนี้
+                    </button>
+                    <button onclick="setAdminFilterAll()" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-cream-100 text-cocoa-700 hover:bg-cream-200 transition-colors">
+                        ดูทั้งหมดทุกวัน
+                    </button>
+                </div>
+                <button onclick="copyDailySummaryText()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-cocoa-800 text-cream-50 hover:bg-cocoa-900 transition-colors flex items-center justify-center gap-1.5">
+                    <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 text-banana-400"></i> คัดลอกสรุปยอดส่งไลน์
+                </button>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Total Revenue -->
+                <div class="card-minimal rounded-2xl p-5">
+                    <div class="flex items-center justify-between text-cocoa-700/80 text-xs font-medium">
+                        <span>ยอดขายรวม (<span id="kpi-date-label">วันนี้</span>)</span>
+                        <div class="w-8 h-8 rounded-xl bg-banana-400/20 text-banana-600 flex items-center justify-center">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-cocoa-900 mt-2"><span id="kpi-total-revenue">0</span> ฿</div>
+                    <div class="text-xs text-cocoa-700/70 mt-1">จำนวน <span id="kpi-total-orders" class="font-semibold text-cocoa-900">0</span> ออเดอร์ (<span id="kpi-total-bags">0</span> ถุง)</div>
+                </div>
+
+                <!-- Paid vs Unpaid -->
+                <div class="card-minimal rounded-2xl p-5">
+                    <div class="flex items-center justify-between text-cocoa-700/80 text-xs font-medium">
+                        <span>สถานะการรับเงิน</span>
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 space-y-1">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-emerald-700 font-medium">จ่ายแล้ว:</span>
+                            <span class="font-bold text-emerald-700"><span id="kpi-paid-amount">0</span> ฿</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-amber-700 font-medium">รอชำระ:</span>
+                            <span class="font-bold text-amber-700"><span id="kpi-unpaid-amount">0</span> ฿</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Channels Breakdown -->
+                <div class="card-minimal rounded-2xl p-5 sm:col-span-2">
+                    <div class="flex items-center justify-between text-cocoa-700/80 text-xs font-medium mb-2">
+                        <span>แยกยอดตามช่องทางการชำระเงิน</span>
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-banana-600"></i>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 pt-1">
+                        <div class="p-2.5 rounded-xl bg-cream-50 border border-cream-200">
+                            <div class="text-[11px] text-cocoa-700">โอนพร้อมเพย์</div>
+                            <div class="text-sm sm:text-base font-bold text-cocoa-900 mt-0.5"><span id="kpi-pay-promptpay">0</span> ฿</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-cream-50 border border-cream-200">
+                            <div class="text-[11px] text-cocoa-700">เงินสด</div>
+                            <div class="text-sm sm:text-base font-bold text-cocoa-900 mt-0.5"><span id="kpi-pay-cash">0</span> ฿</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-cream-50 border border-cream-200">
+                            <div class="text-[11px] text-cocoa-700">จ่ายตอนรับของ</div>
+                            <div class="text-sm sm:text-base font-bold text-cocoa-900 mt-0.5"><span id="kpi-pay-pickup">0</span> ฿</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flavor Breakdown Summary -->
+            <div class="card-minimal rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-cocoa-900 mb-3 flex items-center gap-2">
+                    <i data-lucide="package" class="w-4 h-4 text-banana-600"></i> จำนวนถุงที่ขายได้แยกตามรสชาติ
+                </h3>
+                <div id="admin-flavor-breakdown" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Orders Table / Cards List -->
+            <div class="space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <h3 class="text-base font-semibold text-cocoa-900">รายการคำสั่งซื้อ (<span id="orders-count-badge">0</span>)</h3>
+                    <div class="flex items-center gap-2">
+                        <select id="admin-status-filter" onchange="renderAdminDashboard()" class="px-3 py-1.5 rounded-xl bg-white border border-cream-200 text-xs text-cocoa-800 focus:outline-none">
+                            <option value="all">สถานะทั้งหมด</option>
+                            <option value="unpaid">เฉพาะยังไม่จ่ายเงิน</option>
+                            <option value="paid">เฉพาะชำระเงินแล้ว</option>
+                            <option value="pending_delivery">เฉพาะรอส่งมอบสินค้า</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="admin-orders-list" class="space-y-3">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-cream-200 bg-cream-50 py-6 mt-12">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center text-xs text-cocoa-700/70 space-y-1">
+            <p class="font-medium text-cocoa-800">ร้านบ้านกล้วยฉาบโฮมเมด • ถุงละ 10 บาท ทุกรสชาติ</p>
+            <p>จุดนัดรับฟรี: วิทยาลัยชุมชนสงขลา | พร้อมเพย์: 082-834-7938 (ซุลกุรนัยน์ มุเซะ)</p>
+        </div>
+    </footer>
+
+    <!-- ========================================================= -->
+    <!-- MODALS (Order Receipt, Admin Login, Change Password, Slip) -->
+    <!-- ========================================================= -->
+
+    <!-- 1. Order Success Receipt Modal -->
+    <div id="modal-receipt" class="fixed inset-0 z-50 hidden bg-cocoa-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-cream-200 fade-in max-h-[90vh] overflow-y-auto">
+            <div class="text-center space-y-2 pb-4 border-b border-dashed border-cream-300">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <i data-lucide="check" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-cocoa-900">สั่งซื้อกล้วยฉาบสำเร็จ!</h3>
+                <p class="text-xs text-cocoa-700">ขอบคุณที่อุดหนุนค่ะ ทางร้านได้รับออเดอร์เรียบร้อยแล้ว</p>
+                <div class="inline-block px-3 py-1 rounded-lg bg-cream-100 text-xs font-mono font-semibold text-cocoa-800" id="receipt-order-id">
+                    #ORD-0000
+                </div>
+            </div>
+
+            <div id="receipt-body" class="py-4 space-y-3 text-sm">
+                <!-- Filled dynamically -->
+            </div>
+
+            <div class="pt-3 border-t border-cream-200 flex gap-2">
+                <button onclick="closeModal('modal-receipt')" class="w-full py-3 rounded-2xl bg-cocoa-800 hover:bg-cocoa-900 text-cream-50 font-medium text-sm transition-colors">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Admin Login Modal -->
+    <div id="modal-admin-login" class="fixed inset-0 z-50 hidden bg-cocoa-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border border-cream-200 fade-in space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-cocoa-900 flex items-center gap-2">
+                    <i data-lucide="shield-check" class="w-5 h-5 text-banana-600"></i> เข้าสู่ระบบหลังร้าน
+                </h3>
+                <button onclick="closeModal('modal-admin-login')" class="text-cocoa-700/60 hover:text-cocoa-900">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-xs text-cocoa-700/80">กรุณากรอกรหัสผ่านเจ้าของร้านเพื่อดูยอดขายและจัดการออเดอร์ (รหัสเริ่มต้น: <code class="bg-cream-100 px-1.5 py-0.5 rounded font-semibold">1234</code>)</p>
+            <div>
+                <input type="password" id="admin-password-input" placeholder="กรอกรหัสผ่านหลังร้าน" onkeydown="if(event.key==='Enter') verifyAdminLogin()" class="w-full px-4 py-3 rounded-2xl bg-cream-50 border border-cream-200 text-center text-lg tracking-widest focus:outline-none focus:border-banana-500">
+            </div>
+            <button onclick="verifyAdminLogin()" class="w-full py-3 rounded-2xl bg-cocoa-800 hover:bg-cocoa-900 text-cream-50 font-medium text-sm transition-colors">
+                เข้าสู่ระบบ
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Change Admin Password Modal -->
+    <div id="modal-change-password" class="fixed inset-0 z-50 hidden bg-cocoa-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border border-cream-200 fade-in space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-cocoa-900 flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-5 h-5 text-banana-600"></i> เปลี่ยนรหัสผ่านหลังร้าน
+                </h3>
+                <button onclick="closeModal('modal-change-password')" class="text-cocoa-700/60 hover:text-cocoa-900">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-cocoa-700 mb-1">รหัสผ่านเดิม</label>
+                    <input type="password" id="old-pass-input" placeholder="รหัสผ่านปัจจุบัน" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-cocoa-700 mb-1">รหัสผ่านใหม่</label>
+                    <input type="password" id="new-pass-input" placeholder="ตั้งรหัสผ่านใหม่" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-cocoa-700 mb-1">ยืนยันรหัสผ่านใหม่</label>
+                    <input type="password" id="confirm-pass-input" placeholder="กรอกรหัสผ่านใหม่อีกครั้ง" class="w-full px-3.5 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm focus:outline-none focus:border-banana-500">
+                </div>
+            </div>
+            <button onclick="saveNewAdminPassword()" class="w-full py-3 rounded-2xl bg-banana-500 hover:bg-banana-600 text-white font-medium text-sm transition-colors">
+                บันทึกรหัสผ่านใหม่
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. Slip Viewer Modal -->
+    <div id="modal-slip-viewer" class="fixed inset-0 z-50 hidden bg-cocoa-900/70 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeModal('modal-slip-viewer')">
+        <div class="bg-white rounded-3xl max-w-md w-full p-4 shadow-2xl space-y-3" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-2">
+                <h4 class="text-sm font-semibold text-cocoa-900">หลักฐานการโอนเงิน (สลิป)</h4>
+                <button onclick="closeModal('modal-slip-viewer')" class="p-1 rounded-full hover:bg-cream-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="bg-cream-50 rounded-2xl p-2 flex items-center justify-center">
+                <img id="modal-slip-img" src="" alt="สลิปโอนเงิน" class="max-h-[70vh] rounded-xl object-contain">
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- JAVASCRIPT APPLICATION LOGIC                              -->
+    <!-- ========================================================= -->
+    <script>
+        // ==========================================
+        // 1. PRODUCT DATA & MINIMALIST SVG ARTWORKS
+        // ==========================================
+        const PRODUCTS = [
+            {
+                id: 'sugar',
+                name: 'รสเคลือบน้ำตาล',
+                subtitle: 'หวานละมุน กรอบหอมคาราเมลอ่อนๆ',
+                price: 10,
+                badge: 'ยอดนิยม',
+                badgeColor: 'bg-amber-100 text-amber-800',
+                // Minimalist SVG illustration of Sugar Glazed Banana Chips
+                svg: `<svg viewBox="0 0 120 90" class="w-full h-full">
+                        <rect width="120" height="90" rx="16" fill="#FDF6E7"/>
+                        <g transform="translate(26, 20) rotate(-10)">
+                            <ellipse cx="32" cy="24" rx="28" ry="20" fill="#F5CE62" stroke="#C58917" stroke-width="2"/>
+                            <ellipse cx="32" cy="24" rx="18" ry="12" fill="#FBE59E"/>
+                            <!-- Sugar glaze shine & crystals -->
+                            <path d="M18 18 Q28 12 42 18" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.85"/>
+                            <circle cx="25" cy="26" r="1.5" fill="#FFFFFF"/>
+                            <circle cx="38" cy="22" r="1.5" fill="#FFFFFF"/>
+                            <circle cx="32" cy="30" r="1.2" fill="#FFFFFF"/>
+                        </g>
+                        <g transform="translate(46, 34) rotate(14)">
+                            <ellipse cx="26" cy="20" rx="24" ry="17" fill="#E8B84B" stroke="#C58917" stroke-width="2"/>
+                            <ellipse cx="26" cy="20" rx="15" ry="10" fill="#F9DF8B"/>
+                            <path d="M16 15 Q25 10 35 15" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.85"/>
+                        </g>
+                    </svg>`
+            },
+            {
+                id: 'nori',
+                name: 'รสโนริสาหร่าย',
+                subtitle: 'หอมสาหร่ายญี่ปุ่น กลมกล่อมเค็มมัน',
+                price: 10,
+                badge: 'ขายดี',
+                badgeColor: 'bg-emerald-100 text-emerald-800',
+                svg: `<svg viewBox="0 0 120 90" class="w-full h-full">
+                        <rect width="120" height="90" rx="16" fill="#F2F7F2"/>
+                        <g transform="translate(26, 20) rotate(-10)">
+                            <ellipse cx="32" cy="24" rx="28" ry="20" fill="#F2CF68" stroke="#B88428" stroke-width="2"/>
+                            <ellipse cx="32" cy="24" rx="18" ry="12" fill="#F8E29C"/>
+                            <!-- Nori seaweed flakes -->
+                            <rect x="20" y="18" width="4" height="2.5" rx="1" transform="rotate(20 20 18)" fill="#2D5A36"/>
+                            <rect x="35" y="16" width="5" height="2.5" rx="1" transform="rotate(-15 35 16)" fill="#2D5A36"/>
+                            <rect x="28" y="27" width="4.5" height="2.5" rx="1" transform="rotate(10 28 27)" fill="#2D5A36"/>
+                            <rect x="41" y="25" width="3.5" height="2" rx="1" fill="#2D5A36"/>
+                        </g>
+                        <g transform="translate(46, 34) rotate(14)">
+                            <ellipse cx="26" cy="20" rx="24" ry="17" fill="#E6BE53" stroke="#B88428" stroke-width="2"/>
+                            <ellipse cx="26" cy="20" rx="15" ry="10" fill="#F6DC8C"/>
+                            <rect x="18" y="16" width="4" height="2" rx="1" fill="#2D5A36"/>
+                            <rect x="29" y="22" width="4" height="2" rx="1" transform="rotate(-20 29 22)" fill="#2D5A36"/>
+                        </g>
+                    </svg>`
+            },
+            {
+                id: 'paprika',
+                name: 'รสปาปริก้า',
+                subtitle: 'เข้มข้นถึงเครื่องเทศ เผ็ดนิดๆ กำลังดี',
+                price: 10,
+                badge: 'เข้มข้น',
+                badgeColor: 'bg-orange-100 text-orange-800',
+                svg: `<svg viewBox="0 0 120 90" class="w-full h-full">
+                        <rect width="120" height="90" rx="16" fill="#FDF2EC"/>
+                        <g transform="translate(26, 20) rotate(-10)">
+                            <ellipse cx="32" cy="24" rx="28" ry="20" fill="#EE9B4B" stroke="#B85318" stroke-width="2"/>
+                            <ellipse cx="32" cy="24" rx="18" ry="12" fill="#F5B971"/>
+                            <!-- Paprika seasoning dots -->
+                            <circle cx="22" cy="19" r="1.5" fill="#C93B1E"/>
+                            <circle cx="34" cy="17" r="1.3" fill="#C93B1E"/>
+                            <circle cx="28" cy="28" r="1.6" fill="#C93B1E"/>
+                            <circle cx="40" cy="24" r="1.4" fill="#C93B1E"/>
+                        </g>
+                        <g transform="translate(46, 34) rotate(14)">
+                            <ellipse cx="26" cy="20" rx="24" ry="17" fill="#E58938" stroke="#B85318" stroke-width="2"/>
+                            <ellipse cx="26" cy="20" rx="15" ry="10" fill="#F2AE63"/>
+                            <circle cx="21" cy="17" r="1.4" fill="#C93B1E"/>
+                            <circle cx="31" cy="22" r="1.4" fill="#C93B1E"/>
+                        </g>
+                    </svg>`
+            },
+            {
+                id: 'wingzabb',
+                name: 'รสวิงซ์แซ่บ',
+                subtitle: 'จี๊ดจ๊าดแซ่บซี้ด ครบรสเปรี้ยวเค็มเผ็ด',
+                price: 10,
+                badge: 'แซ่บซี้ด',
+                badgeColor: 'bg-rose-100 text-rose-800',
+                svg: `<svg viewBox="0 0 120 90" class="w-full h-full">
+                        <rect width="120" height="90" rx="16" fill="#FCF0F2"/>
+                        <g transform="translate(26, 20) rotate(-10)">
+                            <ellipse cx="32" cy="24" rx="28" ry="20" fill="#E88A47" stroke="#A83820" stroke-width="2"/>
+                            <ellipse cx="32" cy="24" rx="18" ry="12" fill="#F3AC6B"/>
+                            <!-- Zabb chili & lime flecks -->
+                            <circle cx="23" cy="18" r="1.5" fill="#B91C1C"/>
+                            <circle cx="36" cy="19" r="1.4" fill="#B91C1C"/>
+                            <circle cx="29" cy="28" r="1.5" fill="#B91C1C"/>
+                            <circle cx="38" cy="26" r="1.2" fill="#3F7D20"/>
+                            <circle cx="21" cy="25" r="1.1" fill="#3F7D20"/>
+                        </g>
+                        <g transform="translate(46, 34) rotate(14)">
+                            <ellipse cx="26" cy="20" rx="24" ry="17" fill="#DF7836" stroke="#A83820" stroke-width="2"/>
+                            <ellipse cx="26" cy="20" rx="15" ry="10" fill="#EE9E5B"/>
+                            <circle cx="20" cy="17" r="1.4" fill="#B91C1C"/>
+                            <circle cx="30" cy="21" r="1.3" fill="#3F7D20"/>
+                        </g>
+                    </svg>`
+            }
+        ];
+
+        // ==========================================
+        // 2. APPLICATION STATE & LOCALSTORAGE KEYS
+        // ==========================================
+        const STORAGE_KEYS = {
+            ORDERS: 'banana_shop_orders_v1',
+            ADMIN_PASS: 'banana_shop_admin_pass_v1'
+        };
+
+        const PROMPTPAY_PHONE = '0828347938';
+        const ACCOUNT_NAME = 'ซุลกุรนัยน์ มุเซะ';
+        const DELIVERY_FEE = 25;
+
+        let cart = {
+            sugar: 0,
+            nori: 0,
+            paprika: 0,
+            wingzabb: 0
+        };
+
+        let deliveryMethod = 'pickup'; // 'pickup' or 'delivery'
+        let uploadedSlipBase64 = null;
+        let isAdminLoggedIn = false;
+
+        // ==========================================
+        // 3. REAL EMVCo THAI PROMPTPAY QR GENERATOR
+        // ==========================================
+        /**
+         * Generates standard EMVCo PromptPay payload with CRC-16/CCITT-FALSE
+         * Works 100% with all Thai banking apps (K PLUS, SCB EASY, Krungthai NEXT, etc.)
+         */
+        function generatePromptPayPayload(mobileNumber, amount) {
+            // Format phone number: 0828347938 -> 0066828347938 (13 digits)
+            let cleanPhone = mobileNumber.replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) {
+                cleanPhone = '0066' + cleanPhone.substring(1);
+            }
+
+            const f = (id, val) => id + String(val.length).padStart(2, '0') + val;
+
+            // Merchant Account Information (Tag 29)
+            const aid = f('00', 'A000000677010111'); // PromptPay AID
+            const mobileTag = f('01', cleanPhone);
+            const merchantInfo = f('29', aid + mobileTag);
+
+            // Payload parts
+            let payload = '';
+            payload += f('00', '01'); // Payload Format Indicator
+            payload += f('01', amount > 0 ? '12' : '11'); // 12 = Dynamic (with amount), 11 = Static
+            payload += merchantInfo;
+            payload += f('53', '764'); // Currency: THB (764)
+
+            if (amount > 0) {
+                const amountStr = Number(amount).toFixed(2);
+                payload += f('54', amountStr); // Transaction Amount
+            }
+
+            payload += f('58', 'TH'); // Country Code: TH
+            payload += '6304'; // CRC Tag + Length
+
+            // Calculate CRC16 (Polynomial 0x1021, Initial 0xFFFF)
+            const crc = crc16CCITT(payload);
+            return payload + crc;
+        }
+
+        function crc16CCITT(str) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < str.length; i++) {
+                crc ^= str.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    if ((crc & 0x8000) !== 0) {
+                        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+                    } else {
+                        crc = (crc << 1) & 0xFFFF;
+                    }
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function renderPromptPayQR(totalAmount) {
+            const container = document.getElementById('qrcode-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const payload = generatePromptPayPayload(PROMPTPAY_PHONE, totalAmount);
+            new QRCode(container, {
+                text: payload,
+                width: 176,
+                height: 176,
+                colorDark: '#2B2017',
+                colorLight: '#FFFFFF',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        // ==========================================
+        // 4. INITIALIZATION & STORAGE HELPERS
+        // ==========================================
+        function getTodayDateString() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset();
+            const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        }
+
+        function getAdminPassword() {
+            return localStorage.getItem(STORAGE_KEYS.ADMIN_PASS) || '1234';
+        }
+
+        function getOrders() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEYS.ORDERS);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.error('Error reading orders:', e);
+                return [];
+            }
+        }
+
+        function saveOrders(orders) {
+            try {
+                localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+            } catch (e) {
+                showToast('พื้นที่จัดเก็บเต็ม กรุณาลบออเดอร์เก่าหรือสลิปขนาดใหญ่', 'error');
+            }
+        }
+
+        window.onload = function () {
+            // Set default date inputs to today
+            const today = getTodayDateString();
+            document.getElementById('cust-date').value = today;
+            document.getElementById('admin-filter-date').value = today;
+
+            // Render storefront
+            renderProducts();
+            updateCartUI();
+            lucide.createIcons();
+        };
+
+        // ==========================================
+        // 5. STOREFRONT LOGIC (CART & CHECKOUT)
+        // ==========================================
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = PRODUCTS.map(product => {
+                const qty = cart[product.id] || 0;
+                return `
+                <div class="card-minimal rounded-3xl p-4 flex flex-col justify-between transition-all hover:border-banana-400/70">
+                    <div>
+                        <div class="relative h-28 rounded-2xl overflow-hidden mb-3">
+                            ${product.svg}
+                            <span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${product.badgeColor}">
+                                ${product.badge}
+                            </span>
+                        </div>
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h4 class="font-semibold text-cocoa-900 text-base">${product.name}</h4>
+                                <p class="text-xs text-cocoa-700/75 mt-0.5 line-clamp-2">${product.subtitle}</p>
+                            </div>
+                            <span class="font-bold text-banana-600 text-base whitespace-nowrap">${product.price} ฿</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-cream-100 flex items-center justify-between">
+                        <span class="text-xs text-cocoa-700/70">จำนวน (ถุง)</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="updateQty('${product.id}', -1)" class="w-8 h-8 rounded-xl bg-cream-100 hover:bg-cream-200 text-cocoa-800 flex items-center justify-center transition-colors ${qty === 0 ? 'opacity-40 cursor-not-allowed' : ''}">
+                                <i data-lucide="minus" class="w-4 h-4"></i>
+                            </button>
+                            <span class="w-7 text-center font-semibold text-sm text-cocoa-900">${qty}</span>
+                            <button type="button" onclick="updateQty('${product.id}', 1)" class="w-8 h-8 rounded-xl bg-banana-500 hover:bg-banana-600 text-white flex items-center justify-center shadow-xs transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function updateQty(productId, delta) {
+            const current = cart[productId] || 0;
+            const next = Math.max(0, current + delta);
+            cart[productId] = next;
+            renderProducts();
+            updateCartUI();
+        }
+
+        function clearCart() {
+            cart = { sugar: 0, nori: 0, paprika: 0, wingzabb: 0 };
+            renderProducts();
+            updateCartUI();
+            showToast('ล้างรายการในตะกร้าแล้ว', 'info');
+        }
+
+        function setDeliveryMethod(method) {
+            deliveryMethod = method;
+            const btnPickup = document.getElementById('btn-method-pickup');
+            const btnDelivery = document.getElementById('btn-method-delivery');
+            const pickupInfo = document.getElementById('pickup-info-box');
+            const addressBox = document.getElementById('delivery-address-box');
+
+            if (method === 'pickup') {
+                btnPickup.className = 'p-3 rounded-2xl border-2 border-banana-500 bg-banana-400/10 text-left transition-all';
+                btnDelivery.className = 'p-3 rounded-2xl border border-cream-200 bg-cream-50/50 hover:bg-cream-100/60 text-left transition-all';
+                pickupInfo.classList.remove('hidden');
+                addressBox.classList.add('hidden');
+            } else {
+                btnDelivery.className = 'p-3 rounded-2xl border-2 border-banana-500 bg-banana-400/10 text-left transition-all';
+                btnPickup.className = 'p-3 rounded-2xl border border-cream-200 bg-cream-50/50 hover:bg-cream-100/60 text-left transition-all';
+                pickupInfo.classList.add('hidden');
+                addressBox.classList.remove('hidden');
+            }
+            updateCartUI();
+        }
+
+        function onPaymentMethodChange() {
+            const selected = document.querySelector('input[name="payment-method"]:checked').value;
+            const ppBox = document.getElementById('promptpay-box');
+            if (selected === 'promptpay') {
+                ppBox.classList.remove('hidden');
+            } else {
+                ppBox.classList.add('hidden');
+            }
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            let totalBags = 0;
+            let subtotal = 0;
+            let html = '';
+
+            PRODUCTS.forEach(p => {
+                const qty = cart[p.id] || 0;
+                if (qty > 0) {
+                    const lineTotal = qty * p.price;
+                    totalBags += qty;
+                    subtotal += lineTotal;
+                    html += `
+                        <div class="flex items-center justify-between bg-cream-50 px-3 py-2 rounded-xl border border-cream-200/70 text-xs sm:text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-cocoa-900">${p.name}</span>
+                                <span class="text-cocoa-700/70">x${qty} ถุง</span>
+                            </div>
+                            <span class="font-semibold text-cocoa-900">${lineTotal} ฿</span>
+                        </div>
+                    `;
+                }
+            });
+
+            if (totalBags === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 bg-cream-50/70 rounded-2xl border border-dashed border-cream-300 text-xs text-cocoa-700/70">
+                        ยังไม่มีสินค้าในตะกร้า กรุณาเลือกรสชาติกล้วยฉาบด้านซ้ายค่ะ
+                    </div>
+                `;
+            } else {
+                container.innerHTML = html;
+            }
+
+            const shipping = (totalBags > 0 && deliveryMethod === 'delivery') ? DELIVERY_FEE : 0;
+            const grandTotal = subtotal + shipping;
+
+            document.getElementById('summary-total-bags').textContent = totalBags;
+            document.getElementById('summary-subtotal').textContent = subtotal;
+            document.getElementById('summary-delivery-label').textContent =
+                deliveryMethod === 'pickup' ? 'นัดรับวิทยาลัยชุมชนสงขลา' : 'จัดส่งตามที่อยู่';
+            document.getElementById('summary-shipping').textContent = shipping;
+            document.getElementById('summary-grand-total').textContent = grandTotal;
+
+            // Update QR code with exact grand total
+            renderPromptPayQR(grandTotal);
+        }
+
+        // Slip image compression & upload handling
+        function handleSlipUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                // Resize image via canvas so LocalStorage stays lightweight
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    uploadedSlipBase64 = canvas.toDataURL('image/jpeg', 0.75);
+                    document.getElementById('slip-preview-img').src = uploadedSlipBase64;
+                    document.getElementById('slip-preview-wrapper').classList.remove('hidden');
+                    document.getElementById('slip-file-label').textContent = file.name;
+                    showToast('แนบสลิปเรียบร้อยแล้ว', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeSlip() {
+            uploadedSlipBase64 = null;
+            document.getElementById('slip-input').value = '';
+            document.getElementById('slip-preview-wrapper').classList.add('hidden');
+            document.getElementById('slip-file-label').textContent = 'เลือกรูปภาพสลิปโอนเงิน';
+        }
+
+        function copyPromptPayNumber() {
+            copyTextToClipboard(PROMPTPAY_PHONE, 'คัดลอกเบอร์พร้อมเพย์ 082-834-7938 แล้ว');
+        }
+
+        function submitOrder() {
+            const totalBags = Object.values(cart).reduce((a, b) => a + b, 0);
+            if (totalBags === 0) {
+                showToast('กรุณาเลือกกล้วยฉาบอย่างน้อย 1 ถุงค่ะ', 'error');
+                return;
+            }
+
+            const custName = document.getElementById('cust-name').value.trim();
+            const custPhone = document.getElementById('cust-phone').value.trim();
+            const custAddress = document.getElementById('cust-address').value.trim();
+            const custDate = document.getElementById('cust-date').value;
+            const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+
+            if (!custName) {
+                showToast('กรุณากรอกชื่อผู้สั่งซื้อค่ะ', 'error');
+                return;
+            }
+            if (!custPhone) {
+                showToast('กรุณากรอกเบอร์โทรศัพท์ติดต่อค่ะ', 'error');
+                return;
+            }
+            if (deliveryMethod === 'delivery' && !custAddress) {
+                showToast('กรุณากรอกที่อยู่สำหรับจัดส่งค่ะ', 'error');
+                return;
+            }
+            if (!custDate) {
+                showToast('กรุณาเลือกวันที่รับสินค้าหรือวันที่จัดส่งค่ะ', 'error');
+                return;
+            }
+
+            const items = PRODUCTS.filter(p => cart[p.id] > 0).map(p => ({
+                id: p.id,
+                name: p.name,
+                qty: cart[p.id],
+                price: p.price
+            }));
+
+            const subtotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+            const shippingFee = deliveryMethod === 'delivery' ? DELIVERY_FEE : 0;
+            const totalAmount = subtotal + shippingFee;
+
+            // Auto mark paid if slip is attached via PromptPay
+            const isPaid = (paymentMethod === 'promptpay' && uploadedSlipBase64 !== null);
+
+            const orderId = 'ORD-' + String(Math.floor(1000 + Math.random() * 9000));
+            const newOrder = {
+                id: orderId,
+                createdAt: new Date().toISOString(),
+                orderDate: getTodayDateString(),
+                pickupDate: custDate,
+                customerName: custName,
+                customerPhone: custPhone,
+                deliveryMethod: deliveryMethod,
+                deliveryLocation: deliveryMethod === 'pickup' ? 'จุดนัดรับ วิทยาลัยชุมชนสงขลา' : custAddress,
+                items: items,
+                totalBags: totalBags,
+                subtotal: subtotal,
+                shippingFee: shippingFee,
+                totalAmount: totalAmount,
+                paymentMethod: paymentMethod, // 'promptpay' | 'cash' | 'pay_on_pickup'
+                slipImage: paymentMethod === 'promptpay' ? uploadedSlipBase64 : null,
+                isPaid: isPaid,
+                isDelivered: false
+            };
+
+            const orders = getOrders();
+            orders.unshift(newOrder);
+            saveOrders(orders);
+
+            // Show Receipt Modal
+            showOrderReceipt(newOrder);
+
+            // Reset Form & Cart
+            cart = { sugar: 0, nori: 0, paprika: 0, wingzabb: 0 };
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-phone').value = '';
+            document.getElementById('cust-address').value = '';
+            removeSlip();
+            renderProducts();
+            updateCartUI();
+        }
+
+        function formatPaymentLabel(method) {
+            if (method === 'promptpay') return 'โอนเงินพร้อมเพย์ (PromptPay)';
+            if (method === 'cash') return 'เงินสด (จ่ายตอนรับสินค้า)';
+            if (method === 'pay_on_pickup') return 'ชำระเงินช่วงรับสินค้าพอดี';
+            return method;
+        }
+
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '-';
+            const [y, m, d] = dateStr.split('-');
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            return `${parseInt(d)} ${months[parseInt(m) - 1]} ${parseInt(y) + 543}`;
+        }
+
+        function showOrderReceipt(order) {
+            document.getElementById('receipt-order-id').textContent = order.id;
+            const itemsHtml = order.items.map(i => `
+                <div class="flex justify-between text-xs text-cocoa-800">
+                    <span>• ${i.name} (${i.qty} ถุง)</span>
+                    <span class="font-medium">${i.qty * i.price} ฿</span>
+                </div>
+            `).join('');
+
+            document.getElementById('receipt-body').innerHTML = `
+                <div class="bg-cream-50 p-3.5 rounded-2xl border border-cream-200 space-y-1.5 text-xs">
+                    <div class="flex justify-between"><span class="text-cocoa-700">ผู้สั่งซื้อ:</span><span class="font-semibold text-cocoa-900">${order.customerName} (${order.customerPhone})</span></div>
+                    <div class="flex justify-between"><span class="text-cocoa-700">วันที่รับ/จัดส่ง:</span><span class="font-semibold text-banana-700">${formatThaiDate(order.pickupDate)}</span></div>
+                    <div class="flex justify-between items-start gap-2"><span class="text-cocoa-700 whitespace-nowrap">สถานที่รับ:</span><span class="font-medium text-cocoa-900 text-right">${order.deliveryLocation}</span></div>
+                    <div class="flex justify-between"><span class="text-cocoa-700">การชำระเงิน:</span><span class="font-medium text-cocoa-900">${formatPaymentLabel(order.paymentMethod)}</span></div>
+                </div>
+                <div class="space-y-1.5 pt-1">
+                    <div class="text-xs font-semibold text-cocoa-900">รายการสินค้า:</div>
+                    ${itemsHtml}
+                    <div class="flex justify-between text-xs text-cocoa-700 pt-1 border-t border-cream-200">
+                        <span>ค่าจัดส่ง</span>
+                        <span>${order.shippingFee} ฿</span>
+                    </div>
+                    <div class="flex justify-between text-base font-bold text-banana-600 pt-1">
+                        <span>ยอดรวมสุทธิ</span>
+                        <span>${order.totalAmount} ฿</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modal-receipt').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // 6. VIEW SWITCHING & ADMIN AUTHENTICATION
+        // ==========================================
+        function switchView(view) {
+            const storeView = document.getElementById('view-store');
+            const adminView = document.getElementById('view-admin');
+            const navStore = document.getElementById('nav-store-btn');
+            const navAdmin = document.getElementById('nav-admin-btn');
+
+            if (view === 'store') {
+                storeView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                navStore.className = 'px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cocoa-800 text-cream-50 shadow-sm flex items-center gap-1.5';
+                navAdmin.className = 'px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cream-100 text-cocoa-800 hover:bg-cream-200 border border-cream-200 flex items-center gap-1.5';
+            } else if (view === 'admin') {
+                storeView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                navAdmin.className = 'px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cocoa-800 text-cream-50 shadow-sm flex items-center gap-1.5';
+                navStore.className = 'px-3.5 py-2 rounded-xl text-sm font-medium transition-all bg-cream-100 text-cocoa-800 hover:bg-cream-200 border border-cream-200 flex items-center gap-1.5';
+                renderAdminDashboard();
+            }
+            lucide.createIcons();
+        }
+
+        function openAdminGate() {
+            if (isAdminLoggedIn) {
+                switchView('admin');
+            } else {
+                document.getElementById('admin-password-input').value = '';
+                document.getElementById('modal-admin-login').classList.remove('hidden');
+                setTimeout(() => document.getElementById('admin-password-input').focus(), 100);
+            }
+        }
+
+        function verifyAdminLogin() {
+            const input = document.getElementById('admin-password-input').value;
+            if (input === getAdminPassword()) {
+                isAdminLoggedIn = true;
+                closeModal('modal-admin-login');
+                switchView('admin');
+                showToast('เข้าสู่ระบบหลังร้านสำเร็จ', 'success');
+            } else {
+                showToast('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่', 'error');
+            }
+        }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            switchView('store');
+            showToast('ออกจากระบบหลังร้านแล้ว', 'info');
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('old-pass-input').value = '';
+            document.getElementById('new-pass-input').value = '';
+            document.getElementById('confirm-pass-input').value = '';
+            document.getElementById('modal-change-password').classList.remove('hidden');
+        }
+
+        function saveNewAdminPassword() {
+            const oldPass = document.getElementById('old-pass-input').value;
+            const newPass = document.getElementById('new-pass-input').value.trim();
+            const confirmPass = document.getElementById('confirm-pass-input').value.trim();
+
+            if (oldPass !== getAdminPassword()) {
+                showToast('รหัสผ่านเดิมไม่ถูกต้อง', 'error');
+                return;
+            }
+            if (newPass.length < 4) {
+                showToast('รหัสผ่านใหม่ควรมีอย่างน้อย 4 ตัวอักษร', 'error');
+                return;
+            }
+            if (newPass !== confirmPass) {
+                showToast('ยืนยันรหัสผ่านใหม่ไม่ตรงกัน', 'error');
+                return;
+            }
+
+            localStorage.setItem(STORAGE_KEYS.ADMIN_PASS, newPass);
+            closeModal('modal-change-password');
+            showToast('เปลี่ยนรหัสผ่านหลังร้านเรียบร้อยแล้ว', 'success');
+        }
+
+        // ==========================================
+        // 7. ADMIN DASHBOARD & ANALYTICS
+        // ==========================================
+        function setAdminFilterToday() {
+            document.getElementById('admin-filter-date').value = getTodayDateString();
+            renderAdminDashboard();
+        }
+
+        function setAdminFilterAll() {
+            document.getElementById('admin-filter-date').value = '';
+            renderAdminDashboard();
+        }
+
+        function renderAdminDashboard() {
+            const allOrders = getOrders();
+            const filterDate = document.getElementById('admin-filter-date').value;
+            const statusFilter = document.getElementById('admin-status-filter').value;
+
+            // Filter by date (matches either pickupDate or orderDate)
+            let dateFiltered = allOrders;
+            if (filterDate) {
+                dateFiltered = allOrders.filter(o => o.pickupDate === filterDate || o.orderDate === filterDate);
+                document.getElementById('kpi-date-label').textContent = formatThaiDate(filterDate);
+            } else {
+                document.getElementById('kpi-date-label').textContent = 'ทั้งหมดทุกวัน';
+            }
+
+            // Calculate KPIs from dateFiltered
+            let totalRevenue = 0;
+            let totalBags = 0;
+            let paidAmount = 0;
+            let unpaidAmount = 0;
+            let payPromptpay = 0;
+            let payCash = 0;
+            let payPickup = 0;
+
+            const flavorCounts = {
+                sugar: 0,
+                nori: 0,
+                paprika: 0,
+                wingzabb: 0
+            };
+
+            dateFiltered.forEach(o => {
+                totalRevenue += o.totalAmount;
+                totalBags += o.totalBags;
+
+                if (o.isPaid) paidAmount += o.totalAmount;
+                else unpaidAmount += o.totalAmount;
+
+                if (o.paymentMethod === 'promptpay') payPromptpay += o.totalAmount;
+                else if (o.paymentMethod === 'cash') payCash += o.totalAmount;
+                else if (o.paymentMethod === 'pay_on_pickup') payPickup += o.totalAmount;
+
+                o.items.forEach(item => {
+                    if (flavorCounts[item.id] !== undefined) {
+                        flavorCounts[item.id] += item.qty;
+                    }
+                });
+            });
+
+            document.getElementById('kpi-total-revenue').textContent = totalRevenue.toLocaleString();
+            document.getElementById('kpi-total-orders').textContent = dateFiltered.length;
+            document.getElementById('kpi-total-bags').textContent = totalBags;
+            document.getElementById('kpi-paid-amount').textContent = paidAmount.toLocaleString();
+            document.getElementById('kpi-unpaid-amount').textContent = unpaidAmount.toLocaleString();
+            document.getElementById('kpi-pay-promptpay').textContent = payPromptpay.toLocaleString();
+            document.getElementById('kpi-pay-cash').textContent = payCash.toLocaleString();
+            document.getElementById('kpi-pay-pickup').textContent = payPickup.toLocaleString();
+
+            // Render Flavor Breakdown
+            const flavorContainer = document.getElementById('admin-flavor-breakdown');
+            flavorContainer.innerHTML = PRODUCTS.map(p => {
+                const count = flavorCounts[p.id] || 0;
+                return `
+                    <div class="p-3 rounded-xl bg-cream-50 border border-cream-200 flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-medium text-cocoa-800">${p.name}</div>
+                            <div class="text-[11px] text-cocoa-700/60">${count * p.price} บาท</div>
+                        </div>
+                        <div class="text-lg font-bold text-banana-600">${count} <span class="text-xs font-normal text-cocoa-700">ถุง</span></div>
+                    </div>
+                `;
+            }).join('');
+
+            // Apply secondary status filter for order list
+            let displayOrders = dateFiltered;
+            if (statusFilter === 'paid') displayOrders = dateFiltered.filter(o => o.isPaid);
+            else if (statusFilter === 'unpaid') displayOrders = dateFiltered.filter(o => !o.isPaid);
+            else if (statusFilter === 'pending_delivery') displayOrders = dateFiltered.filter(o => !o.isDelivered);
+
+            document.getElementById('orders-count-badge').textContent = displayOrders.length;
+
+            const listContainer = document.getElementById('admin-orders-list');
+            if (displayOrders.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="card-minimal rounded-3xl p-10 text-center space-y-2">
+                        <i data-lucide="inbox" class="w-10 h-10 text-cocoa-700/30 mx-auto"></i>
+                        <p class="text-sm font-medium text-cocoa-800">ยังไม่มีรายการคำสั่งซื้อในช่วงที่เลือก</p>
+                        <p class="text-xs text-cocoa-700/60">ลองกด "ดูทั้งหมดทุกวัน" หรือ "เพิ่มออเดอร์ทดสอบ" ด้านบน</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            listContainer.innerHTML = displayOrders.map(order => {
+                const itemsBadges = order.items.map(i => `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cream-100 text-cocoa-900 text-xs font-medium">
+                        ${i.name} <strong class="text-banana-700">x${i.qty}</strong>
+                    </span>
+                `).join('');
+
+                return `
+                <div class="card-minimal rounded-2xl p-4 sm:p-5 space-y-3 transition-all ${order.isDelivered ? 'opacity-80 bg-cream-50/40' : ''}">
+                    <!-- Top Row: Order ID, Date, Status Badges -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-cream-100">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-cocoa-800 text-cream-50">${order.id}</span>
+                            <span class="text-xs text-cocoa-700 flex items-center gap-1">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-banana-600"></i> รับสินค้า: <strong class="text-cocoa-900">${formatThaiDate(order.pickupDate)}</strong>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${order.isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                ${order.isPaid ? '✓ ชำระเงินแล้ว' : '⏳ รอชำระเงิน'}
+                            </span>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${order.isDelivered ? 'bg-blue-100 text-blue-800' : 'bg-cream-200 text-cocoa-800'}">
+                                ${order.isDelivered ? '✓ ส่งมอบแล้ว' : 'รอดำเนินการ'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Middle Row: Customer & Items -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                        <div class="md:col-span-5 space-y-1 text-xs">
+                            <div class="font-semibold text-sm text-cocoa-900">${order.customerName} <span class="font-normal text-cocoa-700">(${order.customerPhone})</span></div>
+                            <div class="text-cocoa-700 flex items-start gap-1">
+                                <i data-lucide="${order.deliveryMethod === 'pickup' ? 'map-pin' : 'truck'}" class="w-3.5 h-3.5 text-banana-600 flex-shrink-0 mt-0.5"></i>
+                                <span>${order.deliveryLocation}</span>
+                            </div>
+                            <div class="text-cocoa-700 flex items-center gap-1">
+                                <i data-lucide="credit-card" class="w-3.5 h-3.5 text-banana-600"></i>
+                                <span>${formatPaymentLabel(order.paymentMethod)}</span>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-4 flex flex-wrap gap-1.5">
+                            ${itemsBadges}
+                        </div>
+
+                        <div class="md:col-span-3 md:text-right">
+                            <div class="text-xs text-cocoa-700">รวม ${order.totalBags} ถุง ${order.shippingFee > 0 ? `(+ค่าส่ง ${order.shippingFee}฿)` : '(ส่งฟรี)'}</div>
+                            <div class="text-lg font-bold text-banana-600">${order.totalAmount} บาท</div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Admin Action Controls -->
+                    <div class="pt-2.5 border-t border-cream-100 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="toggleOrderPaid('${order.id}')" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border ${order.isPaid ? 'bg-white border-cream-200 text-cocoa-700 hover:bg-cream-100' : 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'}">
+                                ${order.isPaid ? 'เปลี่ยนเป็นยังไม่จ่าย' : 'ยืนยันรับเงินแล้ว'}
+                            </button>
+
+                            <button onclick="toggleOrderDelivered('${order.id}')" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border ${order.isDelivered ? 'bg-white border-cream-200 text-cocoa-700 hover:bg-cream-100' : 'bg-cocoa-800 border-cocoa-800 text-cream-50 hover:bg-cocoa-900'}">
+                                ${order.isDelivered ? 'ยกเลิกสถานะส่งมอบ' : 'ส่งมอบสินค้าแล้ว'}
+                            </button>
+
+                            ${order.slipImage ? `
+                                <button onclick="viewOrderSlip('${order.id}')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                                    <i data-lucide="image" class="w-3.5 h-3.5"></i> ดูสลิปโอนเงิน
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <button onclick="deleteOrder('${order.id}')" class="px-2.5 py-1.5 rounded-xl text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function toggleOrderPaid(orderId) {
+            const orders = getOrders();
+            const target = orders.find(o => o.id === orderId);
+            if (target) {
+                target.isPaid = !target.isPaid;
+                saveOrders(orders);
+                renderAdminDashboard();
+                showToast(target.isPaid ? `บันทึกออเดอร์ ${orderId} ชำระเงินแล้ว` : `เปลี่ยนสถานะ ${orderId} เป็นรอชำระเงิน`, 'info');
+            }
+        }
+
+        function toggleOrderDelivered(orderId) {
+            const orders = getOrders();
+            const target = orders.find(o => o.id === orderId);
+            if (target) {
+                target.isDelivered = !target.isDelivered;
+                saveOrders(orders);
+                renderAdminDashboard();
+                showToast(target.isDelivered ? `บันทึกออเดอร์ ${orderId} ส่งมอบแล้ว` : `อัปเดตสถานะ ${orderId} แล้ว`, 'info');
+            }
+        }
+
+        function viewOrderSlip(orderId) {
+            const orders = getOrders();
+            const target = orders.find(o => o.id === orderId);
+            if (target && target.slipImage) {
+                document.getElementById('modal-slip-img').src = target.slipImage;
+                document.getElementById('modal-slip-viewer').classList.remove('hidden');
+            }
+        }
+
+        function deleteOrder(orderId) {
+            const orders = getOrders().filter(o => o.id !== orderId);
+            saveOrders(orders);
+            renderAdminDashboard();
+            showToast(`ลบคำสั่งซื้อ ${orderId} เรียบร้อยแล้ว`, 'info');
+        }
+
+        function addSampleOrder() {
+            const today = getTodayDateString();
+            const samples = [
+                {
+                    id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                    createdAt: new Date().toISOString(),
+                    orderDate: today,
+                    pickupDate: today,
+                    customerName: 'น้องฟาฏิมะห์',
+                    customerPhone: '089-123-4567',
+                    deliveryMethod: 'pickup',
+                    deliveryLocation: 'จุดนัดรับ วิทยาลัยชุมชนสงขลา',
+                    items: [
+                        { id: 'sugar', name: 'รสเคลือบน้ำตาล', qty: 3, price: 10 },
+                        { id: 'nori', name: 'รสโนริสาหร่าย', qty: 2, price: 10 }
+                    ],
+                    totalBags: 5,
+                    subtotal: 50,
+                    shippingFee: 0,
+                    totalAmount: 50,
+                    paymentMethod: 'promptpay',
+                    slipImage: null,
+                    isPaid: true,
+                    isDelivered: false
+                },
+                {
+                    id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                    createdAt: new Date().toISOString(),
+                    orderDate: today,
+                    pickupDate: today,
+                    customerName: 'คุณสมชาย (บ้านพักครู)',
+                    customerPhone: '081-987-6543',
+                    deliveryMethod: 'delivery',
+                    deliveryLocation: '124/5 ถ.ไทรบุรี ต.บ่อยาง อ.เมือง จ.สงขลา 90000',
+                    items: [
+                        { id: 'paprika', name: 'รสปาปริก้า', qty: 4, price: 10 },
+                        { id: 'wingzabb', name: 'รสวิงซ์แซ่บ', qty: 4, price: 10 }
+                    ],
+                    totalBags: 8,
+                    subtotal: 80,
+                    shippingFee: 25,
+                    totalAmount: 105,
+                    paymentMethod: 'cash',
+                    slipImage: null,
+                    isPaid: false,
+                    isDelivered: false
+                }
+            ];
+            const orders = getOrders();
+            const pick = samples[Math.floor(Math.random() * samples.length)];
+            orders.unshift(pick);
+            saveOrders(orders);
+            renderAdminDashboard();
+            showToast(`เพิ่มออเดอร์ทดสอบ ${pick.id} เรียบร้อย`, 'success');
+        }
+
+        function copyDailySummaryText() {
+            const filterDate = document.getElementById('admin-filter-date').value;
+            const label = filterDate ? formatThaiDate(filterDate) : 'ทั้งหมด';
+            const rev = document.getElementById('kpi-total-revenue').textContent;
+            const ordersCount = document.getElementById('kpi-total-orders').textContent;
+            const bags = document.getElementById('kpi-total-bags').textContent;
+            const paid = document.getElementById('kpi-paid-amount').textContent;
+            const unpaid = document.getElementById('kpi-unpaid-amount').textContent;
+
+            const text = `📊 สรุปยอดขายร้านบ้านกล้วยฉาบ (${label})\n` +
+                `• จำนวนออเดอร์: ${ordersCount} ออเดอร์ (${bags} ถุง)\n` +
+                `• ยอดขายรวม: ${rev} บาท\n` +
+                `• ชำระแล้ว: ${paid} บาท | รอชำระ: ${unpaid} บาท`;
+
+            copyTextToClipboard(text, 'คัดลอกสรุปยอดขายพร้อมส่งแล้ว');
+        }
+
+        // ==========================================
+        // 8. UTILITY FUNCTIONS (MODAL, TOAST, COPY)
+        // ==========================================
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function copyTextToClipboard(text, successMessage) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast(successMessage, 'success');
+            } catch (err) {
+                showToast('ไม่สามารถคัดลอกข้อความได้', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let colors = 'bg-cocoa-800 text-cream-50 border-cocoa-700';
+            if (type === 'success') colors = 'bg-emerald-700 text-white border-emerald-600';
+            if (type === 'error') colors = 'bg-red-600 text-white border-red-500';
+
+            toast.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-lg border text-xs sm:text-sm font-medium flex items-center justify-between gap-3 fade-in ${colors}`;
+            toast.innerHTML = `<span>${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
