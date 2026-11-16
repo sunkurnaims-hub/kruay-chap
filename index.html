@@ -1,0 +1,157 @@
+ <!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ร้านกล้วยฉาบคุณสุ - บานาน่ามินิมอล</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <h1>🍌 กล้วยฉาบรสเด็ด (กล้วยทั่วไปคัดพิเศษ)</h1>
+            <div class="header-actions">
+                <button id="cart-btn" class="btn btn-outline">🛒 ตะกร้าสินค้า (<span id="cart-count">0</span>)</button>
+                <button id="admin-btn" class="btn btn-secondary">🔐 ระบบหลังร้าน</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Storefront -->
+    <main class="container main-content">
+        <section class="hero">
+            <h2>ความกรอบอร่อยระดับพรีเมียม สไตล์มินิมอล</h2>
+            <p>ราคาเพียงถุงละ 10 บาทเท่านั้น! สด สะอาด ทำใหม่ทุกวัน</p>
+        </section>
+
+        <!-- Product Grid -->
+        <div class="product-grid" id="product-grid">
+            <!-- Products will be injected by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-cart">&times;</span>
+            <h2>🛒 ตะกร้าสินค้าของคุณ</h2>
+            <div id="cart-items-container"></div>
+            
+            <div class="checkout-options">
+                <h3>วิธีการรับสินค้า</h3>
+                <label>
+                    <input type="radio" name="fulfillment" value="pickup" checked> นัดรับสินค้า (ฟรี) ณ <strong>วิทยาลัยชุมชนสงขลา</strong>
+                </label>
+                <label>
+                    <input type="radio" name="fulfillment" value="delivery"> จัดส่งตามที่อยู่ (ค่าส่ง 25 บาท)
+                </label>
+
+                <div id="address-box" class="hidden" style="margin-top: 10px;">
+                    <label>ที่อยู่จัดส่ง:</label>
+                    <textarea id="customer-address" placeholder="กรุณากรอกที่อยู่จัดส่งของคุณ..." rows="2"></textarea>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label>วันที่รับสินค้า / จัดส่ง:</label>
+                    <input type="date" id="order-date" class="form-control">
+                </div>
+
+                <h3>ช่องทางการชำระเงิน</h3>
+                <label><input type="radio" name="payment" value="promptpay" checked> สแกน QR Code พร้อมเพย์</label>
+                <label><input type="radio" name="payment" value="cash"> ชำระเงินสด / จ่ายช่วงรับสินค้าพอดี</label>
+
+                <!-- QR Code Box -->
+                <div id="qrcode-box" class="qrcode-box">
+                    <p><strong>โอนผ่านพร้อมเพย์:</strong> 082-834-7938</p>
+                    <p><strong>ชื่อบัญชี:</strong> ซุลกุรนัยน์ มุเซะ</p>
+                    <div id="qr-display" style="margin: 10px 0;">
+                        <img id="qr-image" src="" alt="PromptPay QR Code" style="max-width: 180px; border-radius: 8px;">
+                    </div>
+                    <p class="text-sm">ยอดชำระรวม: <span id="qr-total-amount">0</span> บาท</p>
+                    
+                    <div style="margin-top: 10px;">
+                        <label class="btn btn-outline" style="cursor: pointer; display: inline-block;">
+                            📤 แนบสลิปโอนเงิน <input type="file" id="slip-file" accept="image/*" style="display: none;">
+                        </label>
+                        <span id="slip-status" class="text-sm" style="margin-left: 8px; color: green;">ยังไม่ได้แนบสลิป</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cart-summary">
+                <h3>ยอดรวมทั้งหมด: <span id="cart-total">0</span> บาท</h3>
+                <button id="checkout-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">ยืนยันการสั่งซื้อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" id="close-admin">&times;</span>
+            <div id="admin-login-section">
+                <h2>🔐 เข้าสู่ระบบหลังร้าน</h2>
+                <p>กรุณากรอกรหัสผ่านเพื่อเข้าจัดการร้านค้า (ค่าเริ่มต้น: 1234)</p>
+                <input type="password" id="admin-password-input" class="form-control" placeholder="รหัสผ่านหลังร้าน">
+                <button id="admin-login-btn" class="btn btn-primary" style="margin-top: 10px;">เข้าสู่ระบบ</button>
+            </div>
+
+            <div id="admin-dashboard-section" class="hidden">
+                <div class="admin-header-flex">
+                    <h2>📊 ระบบหลังร้าน & สรุปยอดขายรายวัน</h2>
+                    <button id="change-pwd-btn" class="btn btn-outline">เปลี่ยนรหัสผ่าน</button>
+                    <button id="admin-logout-btn" class="btn btn-secondary">ออกจากระบบ</button>
+                </div>
+
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <h3>ยอดขายรวมวันนี้</h3>
+                        <p id="stat-today-sales">0 บาท</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>ออเดอร์ทั้งหมด</h3>
+                        <p id="stat-total-orders">0 รายการ</p>
+                    </div>
+                </div>
+
+                <h3>รายการออเดอร์ลูกค้า</h3>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>รหัส / วันที่</th>
+                                <th>รายการสินค้า</th>
+                                <th>การรับสินค้า</th>
+                                <th>ชำระเงิน</th>
+                                <th>ยอดรวม</th>
+                                <th>สลิป</th>
+                                <th>สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-body">
+                            <!-- Orders loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close" id="close-pwd">&times;</span>
+            <h2>เปลี่ยนรหัสผ่านหลังร้าน</h2>
+            <div style="margin-top: 15px;">
+                <label>รหัสผ่านใหม่:</label>
+                <input type="password" id="new-password-input" class="form-control" placeholder="กรอกรหัสผ่านใหม่">
+                <button id="save-new-pwd-btn" class="btn btn-primary" style="margin-top: 15px; width: 100%;">บันทึกรหัสผ่าน</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
